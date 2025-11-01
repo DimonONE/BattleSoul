@@ -6,6 +6,7 @@ import { RPGBot } from "./bot";
 import { commandRegistry, useCommand } from "./sdk";
 import fs from "fs";
 import path from "path";
+import 'dotenv/config'
 
 // Example SDK usage
 useCommand("атака", (ctx) => {

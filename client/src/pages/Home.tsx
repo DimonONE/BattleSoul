@@ -17,7 +17,7 @@ export default function Home() {
   const [darkMode, setDarkMode] = useState(false);
 
   const { data: wsData, connected } = useWebSocket();
-
+  
   // Fetch commands from API
   const { data: commands = [] } = useQuery({
     queryKey: ["/api/commands"],
@@ -31,14 +31,14 @@ export default function Home() {
   // Get current user (first user in the list or mock)
   const currentUser = wsData.users.length > 0 ? wsData.users[0] : {
     id: "1",
-    username: "demo",
-    hp: 250,
-    maxHp: 300,
-    xp: 1840,
-    lvl: 12,
-    wins: 32,
-    totalBattles: 47,
-    totalDamage: 1240,
+    username: "",
+    hp: 0,
+    maxHp: 0,
+    xp: 0,
+    lvl: 0,
+    wins: 0,
+    totalBattles: 0,
+    totalDamage: 0,
     status: "⚔️ Готовий до бою",
   };
 
@@ -50,22 +50,22 @@ export default function Home() {
     {
       name: "Дракончик",
       emoji: "🐉",
-      level: 5,
-      hp: 85,
-      maxHp: 100,
+      level: 1,
+      hp: 120,
+      maxHp: 120,
       strength: 45,
-      evolutionStage: 2,
+      evolutionStage: 1,
       maxEvolutionStage: 5,
       price: 150,
     },
     {
       name: "Фенікс",
       emoji: "🦅",
-      level: 8,
-      hp: 120,
-      maxHp: 120,
+      level: 1,
+      hp: 140,
+      maxHp: 140,
       strength: 62,
-      evolutionStage: 3,
+      evolutionStage: 1,
       maxEvolutionStage: 5,
       price: 300,
       owned: true,
@@ -163,6 +163,7 @@ export default function Home() {
           <div className="space-y-8">
             <UserProfileHeader
               username={currentUser.username}
+              avatar={currentUser.avatar}
               level={currentUser.lvl}
               hp={currentUser.hp}
               maxHp={currentUser.maxHp}

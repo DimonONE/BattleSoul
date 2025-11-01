@@ -7,6 +7,7 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   telegramId: varchar("telegram_id").notNull().unique(),
   username: text("username").notNull(),
+  avatar: text("avatar"),
   hp: integer("hp").notNull().default(100),
   maxHp: integer("max_hp").notNull().default(100),
   xp: integer("xp").notNull().default(0),

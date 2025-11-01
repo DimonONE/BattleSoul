@@ -28,13 +28,15 @@ export class RPGBot {
       const text = msg.text.toLowerCase().trim();
       const sender = msg.from;
       if (!sender) return;
-
+       
       // Get or create sender
       let senderUser = await storage.getUserByTelegramId(sender.id.toString());
+      let senderUserAvatar =  await this.getUserAvatar(sender.id);
       if (!senderUser) {
         senderUser = await storage.createUser({
           telegramId: sender.id.toString(),
           username: sender.username || sender.first_name || "User",
+          avatar: senderUserAvatar,
         });
       }
 
@@ -46,10 +48,12 @@ export class RPGBot {
       if (msg.reply_to_message && msg.reply_to_message.from) {
         const replyTo = msg.reply_to_message.from;
         targetUser = await storage.getUserByTelegramId(replyTo.id.toString());
+        if (sender.id === replyTo.id ) return;
         if (!targetUser) {
           targetUser = await storage.createUser({
             telegramId: replyTo.id.toString(),
             username: replyTo.username || replyTo.first_name || "User",
+            avatar: senderUserAvatar,
           });
         }
         targetUsername = targetUser.username;
@@ -65,6 +69,7 @@ export class RPGBot {
             targetUser = await storage.createUser({
               telegramId: `temp_${Date.now()}`,
               username: targetUsername,
+              avatar: senderUserAvatar,
             });
           }
         }
@@ -191,6 +196,21 @@ export class RPGBot {
       for (const handler of handlers) {
         await handler(ctx);
       }
+    }
+  }
+
+  private async getUserAvatar(userId: number) {
+    try {
+      const photos = await this.bot.getUserProfilePhotos(userId, { limit: 1 });
+      if (photos.total_count > 0) {
+        const fileId = photos.photos[0][0].file_id; // берем первый вариант размера
+        const fileLink = await this.bot.getFileLink(fileId);
+        return fileLink; // ссылка на изображение
+      }
+      return null; // нет фото
+    } catch (err) {
+      console.error("Ошибка при получении аватара:", err);
+      return null;
     }
   }
 

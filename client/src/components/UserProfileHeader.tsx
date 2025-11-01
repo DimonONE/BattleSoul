@@ -1,10 +1,11 @@
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
 interface UserProfileHeaderProps {
   username: string;
+  avatar?: string;
   level: number;
   hp: number;
   maxHp: number;
@@ -15,6 +16,7 @@ interface UserProfileHeaderProps {
 
 export default function UserProfileHeader({
   username,
+  avatar,
   level,
   hp,
   maxHp,
@@ -24,18 +26,22 @@ export default function UserProfileHeader({
 }: UserProfileHeaderProps) {
   const hpPercentage = (hp / maxHp) * 100;
   const xpPercentage = (xp / xpToNextLevel) * 100;
-
+  
   return (
     <Card className="p-8" data-testid="card-user-profile">
       <div className="flex flex-col md:flex-row gap-8 items-start">
         <div className="relative">
           <Avatar className="w-32 h-32" data-testid="avatar-user">
-            <AvatarFallback className="text-4xl font-bold bg-primary text-primary-foreground">
-              {username.substring(0, 2).toUpperCase()}
-            </AvatarFallback>
+            {avatar ? (
+              <AvatarImage src={avatar} alt={username} />
+            ) : (
+              <AvatarFallback className="text-4xl font-bold bg-primary text-primary-foreground">
+                {username.substring(0, 2).toUpperCase()}
+              </AvatarFallback>
+            )}
           </Avatar>
           <Badge
-            className="absolute -top-2 -right-2 px-3 py-1 text-sm font-bold"
+            className="absolute top-2 left-1/2 -translate-x-1/2 px-3 py-1 text-sm font-bold"
             data-testid="badge-level"
           >
             Рівень {level}
