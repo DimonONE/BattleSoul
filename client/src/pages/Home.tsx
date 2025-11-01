@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import TabNavigation from "@/components/TabNavigation";
 import UserProfileHeader from "@/components/UserProfileHeader";
 import StatsPanel from "@/components/StatsPanel";
@@ -7,43 +8,44 @@ import PetCard from "@/components/PetCard";
 import LeaderboardTable from "@/components/LeaderboardTable";
 import BattleHistory from "@/components/BattleHistory";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Moon, Sun, Wifi, WifiOff } from "lucide-react";
+import { useWebSocket } from "@/lib/useWebSocket";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("profile");
   const [darkMode, setDarkMode] = useState(false);
+
+  const { data: wsData, connected } = useWebSocket();
+
+  // Fetch commands from API
+  const { data: commands = [] } = useQuery({
+    queryKey: ["/api/commands"],
+  });
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
     document.documentElement.classList.toggle("dark");
   };
 
-  const commands = [
-    {
-      name: "атака",
-      description: "Завдає шкоду ворогу",
-      emoji: "⚔️",
-      damageRange: [5, 20] as [number, number],
-    },
-    {
-      name: "зцілення",
-      description: "Відновлює HP",
-      emoji: "💚",
-      healRange: [10, 20] as [number, number],
-    },
-    {
-      name: "прокляття",
-      description: "Зменшує силу противника",
-      emoji: "☠️",
-      damageRange: [3, 15] as [number, number],
-    },
-    {
-      name: "захист",
-      description: "Підвищує захист на наступний хід",
-      emoji: "🛡️",
-    },
-  ];
+  // Get current user (first user in the list or mock)
+  const currentUser = wsData.users.length > 0 ? wsData.users[0] : {
+    id: "1",
+    username: "demo",
+    hp: 250,
+    maxHp: 300,
+    xp: 1840,
+    lvl: 12,
+    wins: 32,
+    totalBattles: 47,
+    totalDamage: 1240,
+    status: "⚔️ Готовий до бою",
+  };
 
+  // Calculate XP to next level
+  const xpToNextLevel = currentUser.lvl * 200;
+
+  // Mock pets for shop (todo: remove mock functionality)
   const pets = [
     {
       name: "Дракончик",
@@ -92,57 +94,39 @@ export default function Home() {
     },
   ];
 
-  const players = [
-    { rank: 1, username: "alex", level: 18, wins: 142, totalBattles: 165 },
-    { rank: 2, username: "maria", level: 16, wins: 128, totalBattles: 155 },
-    { rank: 3, username: "igor", level: 15, wins: 95, totalBattles: 120 },
-    { rank: 4, username: "dimon", level: 12, wins: 32, totalBattles: 47, isCurrentUser: true },
-    { rank: 5, username: "olena", level: 11, wins: 45, totalBattles: 68 },
-    { rank: 6, username: "petro", level: 10, wins: 28, totalBattles: 52 },
-  ];
+  // Prepare players for leaderboard
+  const players = wsData.users
+    .sort((a, b) => {
+      const aWinRate = a.totalBattles > 0 ? a.wins / a.totalBattles : 0;
+      const bWinRate = b.totalBattles > 0 ? b.wins / b.totalBattles : 0;
+      return bWinRate - aWinRate || b.wins - a.wins;
+    })
+    .slice(0, 10)
+    .map((user, index) => ({
+      rank: index + 1,
+      username: user.username,
+      level: user.lvl,
+      wins: user.wins,
+      totalBattles: user.totalBattles,
+      isCurrentUser: user.id === currentUser.id,
+    }));
 
-  const battles = [
-    {
-      id: 1,
-      attacker: "dimon",
-      target: "alex",
-      command: "атака",
-      emoji: "⚔️",
-      value: 15,
-      type: "damage" as const,
-      timestamp: new Date(Date.now() - 1000 * 60 * 5),
-    },
-    {
-      id: 2,
-      attacker: "maria",
-      target: "dimon",
-      command: "зцілення",
-      emoji: "💚",
-      value: 12,
-      type: "heal" as const,
-      timestamp: new Date(Date.now() - 1000 * 60 * 15),
-    },
-    {
-      id: 3,
-      attacker: "igor",
-      target: "petro",
-      command: "прокляття",
-      emoji: "☠️",
-      value: 8,
-      type: "curse" as const,
-      timestamp: new Date(Date.now() - 1000 * 60 * 30),
-    },
-    {
-      id: 4,
-      attacker: "alex",
-      target: "maria",
-      command: "атака",
-      emoji: "⚔️",
-      value: 18,
-      type: "damage" as const,
-      timestamp: new Date(Date.now() - 1000 * 60 * 60),
-    },
-  ];
+  // Prepare battles for history
+  const battles = wsData.battles.map((battle, index) => {
+    const attacker = wsData.users.find((u) => u.id === battle.attackerId);
+    const target = wsData.users.find((u) => u.id === battle.targetId);
+    
+    return {
+      id: index,
+      attacker: attacker?.username || "Unknown",
+      target: target?.username || "Unknown",
+      command: battle.command,
+      emoji: battle.emoji,
+      value: battle.value,
+      type: battle.type,
+      timestamp: new Date(battle.createdAt),
+    };
+  });
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -155,14 +139,20 @@ export default function Home() {
               <p className="text-xs text-muted-foreground">Telegram Bot Dashboard</p>
             </div>
           </div>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={toggleDarkMode}
-            data-testid="button-theme-toggle"
-          >
-            {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Badge variant={connected ? "default" : "destructive"} className="gap-1">
+              {connected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+              {connected ? "Підключено" : "Не підключено"}
+            </Badge>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={toggleDarkMode}
+              data-testid="button-theme-toggle"
+            >
+              {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -172,16 +162,20 @@ export default function Home() {
         {activeTab === "profile" && (
           <div className="space-y-8">
             <UserProfileHeader
-              username="dimon"
-              level={12}
-              hp={250}
-              maxHp={300}
-              xp={1840}
-              xpToNextLevel={2500}
-              status="⚔️ Готовий до бою"
+              username={currentUser.username}
+              level={currentUser.lvl}
+              hp={currentUser.hp}
+              maxHp={currentUser.maxHp}
+              xp={currentUser.xp}
+              xpToNextLevel={xpToNextLevel}
+              status={currentUser.status}
             />
 
-            <StatsPanel totalBattles={47} wins={32} totalDamage={1240} />
+            <StatsPanel
+              totalBattles={currentUser.totalBattles}
+              wins={currentUser.wins}
+              totalDamage={currentUser.totalDamage}
+            />
 
             <CommandsList commands={commands} />
           </div>
@@ -219,34 +213,50 @@ export default function Home() {
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-card p-4 rounded-lg border border-card-border text-center">
-                <div className="text-4xl font-bold font-display text-primary">165</div>
+                <div className="text-4xl font-bold font-display text-primary">
+                  {wsData.users.length}
+                </div>
                 <div className="text-xs uppercase tracking-wider text-muted-foreground mt-1">
-                  Всього гравців
+                  Гравців
                 </div>
               </div>
               <div className="bg-card p-4 rounded-lg border border-card-border text-center">
-                <div className="text-4xl font-bold font-display text-primary">3,420</div>
+                <div className="text-4xl font-bold font-display text-primary">
+                  {wsData.battles.length}
+                </div>
                 <div className="text-xs uppercase tracking-wider text-muted-foreground mt-1">
                   Боїв сьогодні
                 </div>
               </div>
               <div className="bg-card p-4 rounded-lg border border-card-border text-center">
-                <div className="text-4xl font-bold font-display text-primary">47,892</div>
+                <div className="text-4xl font-bold font-display text-primary">
+                  {wsData.users.reduce((acc, u) => acc + u.totalDamage, 0)}
+                </div>
                 <div className="text-xs uppercase tracking-wider text-muted-foreground mt-1">
                   Всього шкоди
                 </div>
               </div>
               <div className="bg-card p-4 rounded-lg border border-card-border text-center">
-                <div className="text-4xl font-bold font-display text-primary">18,240</div>
+                <div className="text-4xl font-bold font-display text-primary">
+                  {wsData.users.reduce((acc, u) => acc + u.wins, 0)}
+                </div>
                 <div className="text-xs uppercase tracking-wider text-muted-foreground mt-1">
-                  Зцілень
+                  Перемоги
                 </div>
               </div>
             </div>
 
-            <LeaderboardTable players={players} />
+            {players.length > 0 && <LeaderboardTable players={players} />}
 
-            <BattleHistory battles={battles} />
+            {battles.length > 0 && <BattleHistory battles={battles} />}
+
+            {wsData.users.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">
+                  Поки що немає даних. Почніть використовувати бота в Telegram!
+                </p>
+              </div>
+            )}
           </div>
         )}
       </main>
