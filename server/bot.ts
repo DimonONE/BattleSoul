@@ -134,6 +134,24 @@ export class RPGBot {
     let value = 0;
     let responseText = "";
 
+    const senderInDb = await storage.getUser(sender.id);
+    if (!senderInDb) {
+      await storage.createUser({
+        telegramId: sender.telegramId,
+        username: sender.username,
+        avatar: sender.avatar,
+      });
+    }
+
+    const targetInDb = await storage.getUser(target.id);
+    if (!targetInDb) {
+      await storage.createUser({
+        telegramId: target.telegramId,
+        username: target.username,
+        avatar: target.avatar,
+      });
+    }
+
     // Calculate damage/heal
     if (command.damageRange) {
       value = Math.floor(
