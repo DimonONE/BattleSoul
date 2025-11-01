@@ -30,8 +30,6 @@ export class PostgresStorage implements IStorage {
   }
 
   async createUser(user: InsertUser): Promise<User> {
-    console.log("user", user);
-    
     const [newUser] = await db.insert(users).values(user).returning();
     return newUser;
   }
