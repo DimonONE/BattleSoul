@@ -21,7 +21,28 @@ export class RPGBot {
   }
 
   private setupHandlers() {
-    // Handle all text messages
+    this.bot.onText(/\/start/, async (msg) => {
+      const sender = msg.from;
+      if (!sender) return;
+
+      let senderUser = await storage.getUserByTelegramId(sender.id.toString());
+      let senderUserAvatar =  await this.getUserAvatar(sender.id);
+
+      if (senderUser) {
+        await this.bot.sendMessage(msg.chat.id, `Привет снова, ${senderUser.username}!`);
+        return;
+      }
+
+      senderUser = await storage.createUser({
+        telegramId: sender.id.toString(),
+        username: sender.username || sender.first_name || "User",
+        avatar: senderUserAvatar,
+      });
+
+      await this.bot.sendMessage(msg.chat.id, `Привет, ${senderUser.username}! Добро пожаловать в RPG Bot.`);
+    });
+
+    // Handler messages
     this.bot.on("message", async (msg) => {
       if (!msg.text || msg.text.startsWith("/")) return;
 
