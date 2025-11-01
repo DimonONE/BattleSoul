@@ -26,20 +26,26 @@ export class RPGBot {
       if (!sender) return;
 
       let senderUser = await storage.getUserByTelegramId(sender.id.toString());
-      let senderUserAvatar =  await this.getUserAvatar(sender.id);
+      let senderUserAvatar = await this.getUserAvatar(sender.id);
 
       if (senderUser) {
-        await this.bot.sendMessage(msg.chat.id, `Привет снова, ${senderUser.username}!`);
+        await this.bot.sendMessage(
+          msg.chat.id,
+          `👋 Вітаю знову, ${senderUser.username}! Готовий продовжувати свої пригоди? ⚔️✨`
+        );
         return;
       }
 
       senderUser = await storage.createUser({
         telegramId: sender.id.toString(),
-        username: sender.username || sender.first_name || "User",
+        username: sender.username || sender.first_name || "Герой",
         avatar: senderUserAvatar,
       });
 
-      await this.bot.sendMessage(msg.chat.id, `Привет, ${senderUser.username}! Добро пожаловать в RPG Bot.`);
+      await this.bot.sendMessage(
+        msg.chat.id,
+        `🛡️ Ласкаво просимо, ${senderUser.username}! Твоя епічна пригода в світі BattleSoul починається! ⚔️🔥`
+      );
     });
 
     // Handler messages

@@ -158,5 +158,3 @@ export class MemStorage implements IStorage {
       .slice(0, limit);
   }
 }
-
-export const storage = new MemStorage();
