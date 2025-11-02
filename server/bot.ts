@@ -10,6 +10,11 @@ export class RPGBot {
   private commandRegistry: CommandRegistry;
   private commands: any[];
 
+  private badWords = [
+    "блять", "блядь", "сука", "пизда", "нахуй", "ебать", "хуй", "мразь", "гандон",
+    "пидор", "підор", "ебан", "сцука", "долбоеб", "уебок", "тварь", "хуесос",
+  ];
+
   constructor(token: string, commandRegistry: CommandRegistry) {
     this.bot = new TelegramBot(token, { polling: true });
     this.commandRegistry = commandRegistry;
@@ -52,6 +57,16 @@ export class RPGBot {
     // Handler messages
     this.bot.on("message", async (msg) => {
       if (!msg.text || msg.text.startsWith("/")) return;
+
+      // Проверка на нецензурные слова
+      const hasBadWords = this.badWords.some(word => msg.text?.toLowerCase().includes(word));
+      if (hasBadWords) {
+        await this.bot.sendMessage(
+          msg.chat.id,
+          `⚠️ @${msg.from?.username || "гравець"}, не використовуй нецензурні слова! 😤`
+        );
+        return; 
+      }
 
       const text = msg.text.toLowerCase().trim();
       const sender = msg.from;
