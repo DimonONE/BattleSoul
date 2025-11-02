@@ -61,6 +61,7 @@ export class RPGBot {
       // Проверка на нецензурные слова
       const hasBadWords = this.badWords.some(word => msg.text?.toLowerCase().includes(word));
       if (hasBadWords) {
+        await this.bot.deleteMessage(msg.chat.id, msg.message_id);
         await this.bot.sendMessage(
           msg.chat.id,
           `⚠️ @${msg.from?.username || "гравець"}, не використовуй нецензурні слова! 😤`
