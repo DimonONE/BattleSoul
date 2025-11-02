@@ -11,21 +11,21 @@ export function useWebSocket() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [connected, setConnected] = useState(false);
 
-  useEffect(() => {
-    async function fetchInitial() {
-      try {
-        const [usersRes, battlesRes] = await Promise.all([
-          fetch("/api/users"),
-          fetch("/api/battles")
-        ]);
-        const [users, battles] = await Promise.all([usersRes.json(), battlesRes.json()]);
-        setData({ users, battles });
-      } catch (err) {
-        console.error("Failed initial fetch:", err);
-      }
+  async function fetchInitial() {
+    try {
+      const [usersRes, battlesRes] = await Promise.all([
+        fetch("/api/users"),
+        fetch("/api/battles")
+      ]);
+      const [users, battles] = await Promise.all([usersRes.json(), battlesRes.json()]);
+      setData({ users, battles });
+    } catch (err) {
+      console.error("Failed initial fetch:", err);
     }
+  }
 
-    fetchInitial();
+
+  useEffect(() => {
 
     const newSocket = io({ path: "/socket.io" });
 
@@ -51,6 +51,7 @@ export function useWebSocket() {
     // });
 
     setSocket(newSocket);
+    fetchInitial();
 
     return () => {newSocket.close()};
   }, []);

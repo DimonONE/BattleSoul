@@ -9,7 +9,7 @@ import LeaderboardTable from "@/components/LeaderboardTable";
 import BattleHistory from "@/components/BattleHistory";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Moon, Sun, Wifi, WifiOff } from "lucide-react";
+import { Moon, Sun, Wifi, WifiOff, HandCoins, Dumbbell, Shield, Zap, Brain, Backpack } from "lucide-react";
 import { useWebSocket } from "@/lib/useWebSocket";
 
 export default function Home() {
@@ -18,7 +18,6 @@ export default function Home() {
 
   const { data: wsData, connected } = useWebSocket();
   
-  // Fetch commands from API
   const { data: commands = [] as any } = useQuery({
     queryKey: ["/api/commands"],
   });
@@ -28,8 +27,9 @@ export default function Home() {
     document.documentElement.classList.toggle("dark");
   };
 
-  // Get current user (first user in the list or mock)
-  const currentUser = wsData.users.length > 0 ? wsData.users[0] : {
+  console.log("wsData", wsData);
+
+  const currentUser = wsData.users.length > 0 ? {...wsData.users[0], inventory: Array.from(wsData.users[0].inventory)}  : {
     id: "1",
     username: "",
     hp: 0,
@@ -40,61 +40,25 @@ export default function Home() {
     totalBattles: 0,
     totalDamage: 0,
     status: "⚔️ Готовий до бою",
+    coins: 0,
+    strength: 10,
+    defense: 5,
+    agility: 5,
+    intelligence: 5,
+    inventory: [],
   };
 
-  // Calculate XP to next level
+  console.log("currentUser", currentUser);
+
   const xpToNextLevel = currentUser.lvl * 200;
 
-  // Mock pets for shop (todo: remove mock functionality)
   const pets = [
-    {
-      name: "Дракончик",
-      emoji: "🐉",
-      level: 1,
-      hp: 120,
-      maxHp: 120,
-      strength: 45,
-      evolutionStage: 1,
-      maxEvolutionStage: 5,
-      price: 150,
-    },
-    {
-      name: "Фенікс",
-      emoji: "🦅",
-      level: 1,
-      hp: 140,
-      maxHp: 140,
-      strength: 62,
-      evolutionStage: 1,
-      maxEvolutionStage: 5,
-      price: 300,
-      owned: true,
-    },
-    {
-      name: "Вовк",
-      emoji: "🐺",
-      level: 3,
-      hp: 60,
-      maxHp: 75,
-      strength: 30,
-      evolutionStage: 1,
-      maxEvolutionStage: 5,
-      price: 80,
-    },
-    {
-      name: "Грифон",
-      emoji: "🦁",
-      level: 6,
-      hp: 95,
-      maxHp: 110,
-      strength: 50,
-      evolutionStage: 2,
-      maxEvolutionStage: 5,
-      price: 200,
-    },
+    { name: "Дракончик", emoji: "🐉", level: 1, hp: 120, maxHp: 120, strength: 45, evolutionStage: 1, maxEvolutionStage: 5, price: 150 },
+    { name: "Фенікс", emoji: "🦅", level: 1, hp: 140, maxHp: 140, strength: 62, evolutionStage: 1, maxEvolutionStage: 5, price: 300, owned: true },
+    { name: "Вовк", emoji: "🐺", level: 3, hp: 60, maxHp: 75, strength: 30, evolutionStage: 1, maxEvolutionStage: 5, price: 80 },
+    { name: "Грифон", emoji: "🦁", level: 6, hp: 95, maxHp: 110, strength: 50, evolutionStage: 2, maxEvolutionStage: 5, price: 200 },
   ];
 
-  // Prepare players for leaderboard
   const players = wsData.users
     .sort((a, b) => {
       const aWinRate = a.totalBattles > 0 ? a.wins / a.totalBattles : 0;
@@ -111,7 +75,6 @@ export default function Home() {
       isCurrentUser: user.id === currentUser.id,
     }));
 
-  // Prepare battles for history
   const battles = wsData.battles.map((battle, index) => {
     const attacker = wsData.users.find((u) => u.id === battle.attackerId);
     const target = wsData.users.find((u) => u.id === battle.targetId);
@@ -144,12 +107,7 @@ export default function Home() {
               {connected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
               {connected ? "Підключено" : "Не підключено"}
             </Badge>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={toggleDarkMode}
-              data-testid="button-theme-toggle"
-            >
+            <Button size="icon" variant="ghost" onClick={toggleDarkMode}>
               {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </Button>
           </div>
@@ -177,6 +135,57 @@ export default function Home() {
               wins={currentUser.wins}
               totalDamage={currentUser.totalDamage}
             />
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <div className="bg-card p-4 rounded-lg border text-center flex flex-col items-center">
+                <HandCoins className="text-yellow-500 w-6 h-6 mb-1" />
+                <div className="text-2xl font-bold text-primary">{currentUser.coins}</div>
+                <div className="text-xs text-muted-foreground mt-1">Монети</div>
+              </div>
+
+              <div className="bg-card p-4 rounded-lg border text-center flex flex-col items-center">
+                <Dumbbell className="text-red-500 w-6 h-6 mb-1" />
+                <div className="text-2xl font-bold text-primary">{currentUser.strength}</div>
+                <div className="text-xs text-muted-foreground mt-1">Сила</div>
+              </div>
+
+              <div className="bg-card p-4 rounded-lg border text-center flex flex-col items-center">
+                <Shield className="text-blue-400 w-6 h-6 mb-1" />
+                <div className="text-2xl font-bold text-primary">{currentUser.defense}</div>
+                <div className="text-xs text-muted-foreground mt-1">Захист</div>
+              </div>
+
+              <div className="bg-card p-4 rounded-lg border text-center flex flex-col items-center">
+                <Zap className="text-green-400 w-6 h-6 mb-1" />
+                <div className="text-2xl font-bold text-primary">{currentUser.agility}</div>
+                <div className="text-xs text-muted-foreground mt-1">Спритність</div>
+              </div>
+
+              <div className="bg-card p-4 rounded-lg border text-center flex flex-col items-center">
+                <Brain className="text-purple-400 w-6 h-6 mb-1" />
+                <div className="text-2xl font-bold text-primary">{currentUser.intelligence}</div>
+                <div className="text-xs text-muted-foreground mt-1">Інтелект</div>
+              </div>
+
+              <div className="bg-card p-4 rounded-lg border text-center flex flex-col items-center">
+                <Backpack className="text-orange-400 w-6 h-6 mb-1" />
+                <div className="text-2xl font-bold text-primary">{currentUser.inventory.length}</div>
+                <div className="text-xs text-muted-foreground mt-1">Предметів</div>
+              </div>
+            </div>
+
+            {currentUser.inventory.length > 0 && (
+              <div className="bg-card p-4 rounded-lg border">
+                <h3 className="font-bold mb-2">🎒 Інвентар</h3>
+                <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {currentUser.inventory.map((item: any, i: number) => (
+                    <li key={i} className="border rounded-md p-2 text-sm text-center bg-muted">
+                      {item.emoji || "📦"} {item.name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <CommandsList commands={commands} />
           </div>
@@ -207,50 +216,38 @@ export default function Home() {
           <div className="space-y-8">
             <div>
               <h1 className="text-3xl font-bold font-display mb-2">Статистика</h1>
-              <p className="text-muted-foreground">
-                Рейтинг гравців та історія боїв
-              </p>
+              <p className="text-muted-foreground">Рейтинг гравців та історія боїв</p>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-card p-4 rounded-lg border border-card-border text-center">
-                <div className="text-4xl font-bold font-display text-primary">
+              <div className="bg-card p-4 rounded-lg border text-center">
+                <div className="text-4xl font-bold text-primary">
                   {wsData.users.length}
                 </div>
-                <div className="text-xs uppercase tracking-wider text-muted-foreground mt-1">
-                  Гравців
-                </div>
+                <div className="text-xs text-muted-foreground mt-1">Гравців</div>
               </div>
-              <div className="bg-card p-4 rounded-lg border border-card-border text-center">
-                <div className="text-4xl font-bold font-display text-primary">
+              <div className="bg-card p-4 rounded-lg border text-center">
+                <div className="text-4xl font-bold text-primary">
                   {wsData.battles.length}
                 </div>
-                <div className="text-xs uppercase tracking-wider text-muted-foreground mt-1">
-                  Боїв сьогодні
-                </div>
+                <div className="text-xs text-muted-foreground mt-1">Боїв сьогодні</div>
               </div>
-              <div className="bg-card p-4 rounded-lg border border-card-border text-center">
-                <div className="text-4xl font-bold font-display text-primary">
+              <div className="bg-card p-4 rounded-lg border text-center">
+                <div className="text-4xl font-bold text-primary">
                   {wsData.users.reduce((acc, u) => acc + u.totalDamage, 0)}
                 </div>
-                <div className="text-xs uppercase tracking-wider text-muted-foreground mt-1">
-                  Всього шкоди
-                </div>
+                <div className="text-xs text-muted-foreground mt-1">Всього шкоди</div>
               </div>
-              <div className="bg-card p-4 rounded-lg border border-card-border text-center">
-                <div className="text-4xl font-bold font-display text-primary">
+              <div className="bg-card p-4 rounded-lg border text-center">
+                <div className="text-4xl font-bold text-primary">
                   {wsData.users.reduce((acc, u) => acc + u.wins, 0)}
                 </div>
-                <div className="text-xs uppercase tracking-wider text-muted-foreground mt-1">
-                  Перемоги
-                </div>
+                <div className="text-xs text-muted-foreground mt-1">Перемоги</div>
               </div>
             </div>
 
             {players.length > 0 && <LeaderboardTable players={players} />}
-
             {battles.length > 0 && <BattleHistory battles={battles} />}
-
             {wsData.users.length === 0 && (
               <div className="text-center py-12">
                 <p className="text-muted-foreground">

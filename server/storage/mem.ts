@@ -66,11 +66,15 @@ export class MemStorage implements IStorage {
       totalDamage: insertUser.totalDamage ?? 0,
       status: insertUser.status ?? "⚔️ Готовий до бою",
       lastAction: insertUser.lastAction ?? null,
+      coins: insertUser.coins ?? 0,
+      strength: insertUser.strength ?? 10,
+      defense: insertUser.defense ?? 5,
+      agility: insertUser.agility ?? 5,
+      intelligence: insertUser.intelligence ?? 5,
+      inventory: insertUser.inventory ?? null, 
       createdAt: new Date(),
     };
     this.users.set(id, user);
-    console.log("user:created", user);
-    
     ioSocket.emit("user:created", user); 
 
     return user;

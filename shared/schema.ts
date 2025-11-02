@@ -8,15 +8,52 @@ export const users = pgTable("users", {
   telegramId: varchar("telegram_id").notNull().unique(),
   username: text("username").notNull(),
   avatar: text("avatar"),
+
+  // Основные статы
   hp: integer("hp").notNull().default(100),
   maxHp: integer("max_hp").notNull().default(100),
+  strength: integer("strength").notNull().default(10),
+  defense: integer("defense").notNull().default(5),
+  agility: integer("agility").notNull().default(5),
+  intelligence: integer("intelligence").notNull().default(5),
+
+  // RPG прогресс
   xp: integer("xp").notNull().default(0),
   lvl: integer("lvl").notNull().default(1),
+
+  // Игровая статистика
   lastAction: timestamp("last_action"),
   wins: integer("wins").notNull().default(0),
   totalBattles: integer("total_battles").notNull().default(0),
   totalDamage: integer("total_damage").notNull().default(0),
+
+  // Баланс и инвентарь
+  coins: integer("coins").notNull().default(0),
+  inventory: text("inventory").default("[]"), // JSON массив предметов
+
   status: text("status").default("⚔️ Готовий до бою"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const items = pgTable("items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  type: text("type").notNull(),
+  strength: integer("strength").default(0),
+  defense: integer("defense").default(0),
+  agility: integer("agility").default(0),
+  intelligence: integer("intelligence").default(0),
+  price: integer("price").notNull().default(0),
+  emoji: text("emoji"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userItems = pgTable("user_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  itemId: varchar("item_id").notNull().references(() => items.id),
+  quantity: integer("quantity").notNull().default(1),
+  equipped: boolean("equipped").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

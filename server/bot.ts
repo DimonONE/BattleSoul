@@ -132,7 +132,6 @@ export class RPGBot {
   ) {
     const handlers = this.commandRegistry.getHandlers(command.name);
 
-    // Ensure users exist in storage
     const ensureUser = async (user: any) => {
       let dbUser = await storage.getUser(user.id);
       if (!dbUser) {
@@ -179,63 +178,128 @@ export class RPGBot {
         .replace("{value}", value.toString());
     };
 
-    // Урон
-    if (command.damageRange) {
-      value = Math.floor(
-        Math.random() * (command.damageRange[1] - command.damageRange[0] + 1) +
-          command.damageRange[0]
-      );
+    // Функция добавления опыта и повышение уровня
+    const addXp = async (userId: string, xpGained: number) => {
+      const user = await storage.getUser(userId);
+      if (!user) return;
 
-      // Критический удар
-      const isCritical = Math.random() < 0.15;
-      if (isCritical) {
-        const critBonus = Math.floor(value * (0.4 + Math.random() * 0.3));
-        value += critBonus;
+      let newXp = user.xp + xpGained;
+      let newLvl = user.lvl;
+      let stats = { ...user };
+
+      const xpForNextLevel = (lvl: number) => lvl * 100;
+
+      while (newXp >= xpForNextLevel(newLvl)) {
+        newXp -= xpForNextLevel(newLvl);
+        newLvl += 1;
+
+        stats.maxHp += 10;
+        stats.hp = stats.maxHp;
+        stats.strength += 2;
+        stats.defense += 1;
+        stats.agility += 1;
+        stats.intelligence += 1;
       }
 
-      const newHp = Math.max(0, targetInDb.hp - value);
-      await storage.updateUser(targetInDb.id, { hp: newHp });
+      await storage.updateUser(userId, { ...stats, xp: newXp, lvl: newLvl,  });
+    };
 
-      // Update stats
-      await storage.updateUser(senderInDb.id, {
-        totalDamage: senderInDb.totalDamage + value,
-        totalBattles: senderInDb.totalBattles + 1,
-        wins: newHp === 0 ? senderInDb.wins + 1 : senderInDb.wins,
-      });
-      await storage.updateUser(targetInDb.id, {
-        totalBattles: targetInDb.totalBattles + 1,
-      });
+    // Атака
+    if (command.damageRange) {
+      const missChance = 0.1; // 10% шанс промаха
+      const counterChance = 0.1; // 10% шанс контрудара
+      const isMissed = Math.random() < missChance;
+      const isCounter = !isMissed && Math.random() < counterChance;
 
-      responseText = formatResponse(command.responses);
-      if (isCritical) responseText += " <b>Це був критичний удар!</b>!";
-      
-      await saveBattle();
+      if (isMissed) {
+        responseText = `💨 @${senderInDb.username} промахнувся по @${targetInDb.username}!`;
+        await saveBattle();
+      } else {
+        value = Math.floor(
+          Math.random() * (command.damageRange[1] - command.damageRange[0] + 1) +
+            command.damageRange[0]
+        );
+
+        const isCritical = Math.random() < 0.15;
+        if (isCritical) {
+          const critBonus = Math.floor(value * (0.4 + Math.random() * 0.3));
+          value += critBonus;
+        }
+
+        let newHp = Math.max(0, targetInDb.hp - value);
+        await storage.updateUser(targetInDb.id, { hp: newHp });
+
+        // Контрудар
+        if (isCounter) {
+          const counterValue = Math.floor(value / 2);
+          const newSenderHp = Math.max(0, senderInDb.hp - counterValue);
+          await storage.updateUser(senderInDb.id, { hp: newSenderHp });
+          responseText =
+            formatResponse(command.responses) +
+            ` ⚡ @${senderInDb.username} отримав контрудар на ${counterValue} HP!`;
+        } else {
+          responseText = formatResponse(command.responses);
+        }
+
+        if (isCritical) responseText += " <b>Це був критичний удар!</b>!";
+
+        // Обновляем статистику
+        await storage.updateUser(senderInDb.id, {
+          totalDamage: senderInDb.totalDamage + value,
+          totalBattles: senderInDb.totalBattles + 1,
+          wins: newHp === 0 ? senderInDb.wins + 1 : senderInDb.wins,
+          coins: senderInDb.coins + (newHp === 0 ? 10 : 0), // монеты за победу
+        });
+        await storage.updateUser(targetInDb.id, {
+          totalBattles: targetInDb.totalBattles + 1,
+        });
+
+        // Добавляем опыт
+        await addXp(senderInDb.id, value);
+        if (command.healRange) await addXp(senderInDb.id, Math.floor(value / 2));
+
+        await saveBattle();
+      }
     }
+    // Лечение
     else if (command.healRange) {
-      value = Math.floor(
-        Math.random() * (command.healRange[1] - command.healRange[0] + 1) +
-          command.healRange[0]
-      );
-      const newHp = Math.min(targetInDb.maxHp, targetInDb.hp + value);
-      await storage.updateUser(targetInDb.id, { hp: newHp });
+      const failChance = 0.1;
+      const isFailed = Math.random() < failChance;
 
-      responseText = formatResponse(command.responses);
+      if (isFailed) {
+        responseText = `💉 Лікування @${targetInDb.username} не вдалося!`;
+        value = 0;
+        await saveBattle();
+      } else {
+        value = Math.floor(
+          Math.random() * (command.healRange[1] - command.healRange[0] + 1) +
+            command.healRange[0]
+        );
+        const newHp = Math.min(targetInDb.maxHp, targetInDb.hp + value);
+        await storage.updateUser(targetInDb.id, { hp: newHp });
+        responseText = formatResponse(command.responses);
 
-      await saveBattle();
+        // Добавляем опыт за лечение
+        await addXp(senderInDb.id, Math.floor(value / 2));
+
+        await saveBattle();
+      }
     }
+    // Проклятия
     else if (command.type === "curse") {
       value = Math.floor(Math.random() * 10) + 5;
-      responseText = formatResponse(command.responses );
+      responseText = formatResponse(command.responses);
       await saveBattle();
     }
+    // Защита
     else if (command.type === "defense") {
-      responseText = formatResponse(command.responses );
+      responseText = formatResponse(command.responses);
     }
 
     if (command.image) {
-      await this.bot.sendPhoto(chatId, command.image, { caption: responseText} );
+      await this.bot.sendPhoto(chatId, command.image, { caption: responseText });
     } else {
-      await this.bot.sendMessage(chatId, responseText);
+      await this.bot.sendMessage(chatId, responseText, { parse_mode: "HTML" });
     }
 
     if (handlers.length > 0) {
@@ -245,7 +309,8 @@ export class RPGBot {
         damage: value,
         command: command.name,
         emoji: command.emoji,
-        reply: (text: string) => this.bot.sendMessage(chatId, text, { parse_mode:"HTML" } ),
+        reply: (text: string) =>
+          this.bot.sendMessage(chatId, text, { parse_mode: "HTML" }),
       };
       for (const handler of handlers) {
         await handler(ctx);
@@ -254,15 +319,42 @@ export class RPGBot {
   }
 
 
+  private async addXp (userId: string, xpGained: number) {
+    const user = await storage.getUser(userId);
+    if (!user) return;
+
+    let newXp = user.xp + xpGained;
+    let newLvl = user.lvl;
+    let newStats = { ...user };
+
+    // Формула повышения уровня (можно изменить)
+    const xpForNextLevel = (lvl: number) => lvl * 100;
+
+    while (newXp >= xpForNextLevel(newLvl)) {
+      newXp -= xpForNextLevel(newLvl);
+      newLvl += 1;
+
+      // Увеличиваем характеристики при повышении уровня
+      newStats.maxHp += 10;
+      newStats.hp = newStats.maxHp;
+      newStats.strength += 2;
+      newStats.defense += 1;
+      newStats.agility += 1;
+      newStats.intelligence += 1;
+    }
+
+    await storage.updateUser(userId, {...newStats, xp: newXp, lvl: newLvl, });
+  };
+
   private async getUserAvatar(userId: number) {
     try {
       const photos = await this.bot.getUserProfilePhotos(userId, { limit: 1 });
       if (photos.total_count > 0) {
-        const fileId = photos.photos[0][0].file_id; // берем первый вариант размера
+        const fileId = photos.photos[0][0].file_id; 
         const fileLink = await this.bot.getFileLink(fileId);
-        return fileLink; // ссылка на изображение
+        return fileLink; 
       }
-      return null; // нет фото
+      return null;
     } catch (err) {
       console.error("Ошибка при получении аватара:", err);
       return null;
