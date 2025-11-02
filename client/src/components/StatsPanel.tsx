@@ -49,7 +49,7 @@ export default function StatsPanel({ totalBattles, wins, totalDamage }: StatsPan
       />
       <StatCard
         icon={<Heart />}
-        label="Шкода"
+        label="Завданої шкоди"
         value={totalDamage}
         testId="card-stat-damage"
       />

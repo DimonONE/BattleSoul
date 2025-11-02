@@ -35,7 +35,3 @@ export function useCommand(commandName: string, handler: CommandHandler) {
   console.log(`✓ Command registered: ${commandName}`);
 }
 
-// Example usage (to be used in application):
-// useCommand('атака', (ctx) => {
-//   ctx.reply(`⚔️ ${ctx.sender} атакує ${ctx.target} — ${ctx.damage} шкоди!`);
-// });

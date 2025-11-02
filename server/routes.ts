@@ -17,11 +17,13 @@ useCommand("зцілення", (ctx) => {
   console.log(`[SDK] ${ctx.sender} зцілив ${ctx.target} на ${ctx.damage} HP!`);
 });
 
+export let ioSocket: SocketIOServer; 
+
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   
   // Setup Socket.IO
-  const io = new SocketIOServer(httpServer, {
+  ioSocket = new SocketIOServer(httpServer, {
     cors: {
       origin: "*",
       methods: ["GET", "POST"],
@@ -38,7 +40,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // WebSocket connection
-  io.on("connection", (socket) => {
+  ioSocket.on("connection", (socket) => {
     console.log("Client connected to WebSocket");
 
     socket.on("disconnect", () => {
@@ -99,13 +101,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to add command" });
     }
   });
-
-  // Broadcast updates to all connected clients
-  setInterval(async () => {
-    const users = await storage.getAllUsers();
-    const battles = await storage.getRecentBattles(10);
-    io.emit("update", { users, battles });
-  }, 2000);
 
   console.log("⚔️ BattleSoul RPG Bot connected to PostgreSQL. SDK UI (React) is running.");
 

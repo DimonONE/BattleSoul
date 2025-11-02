@@ -1,5 +1,6 @@
 import { type User, type InsertUser, type Pet, type InsertPet, type Battle, type InsertBattle } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { ioSocket } from "server/routes";
 
 export interface IStorage {
   // Users
@@ -68,6 +69,10 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
     };
     this.users.set(id, user);
+    console.log("user:created", user);
+    
+    ioSocket.emit("user:created", user); 
+
     return user;
   }
 

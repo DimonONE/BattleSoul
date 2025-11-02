@@ -30,7 +30,20 @@ export class HybridStorage implements IStorage {
   }
 
   async createUser(user: InsertUser) {
+    let existing = await this.mem.getUserByTelegramId(user.telegramId);
+    if (existing) return existing;
+
+    existing = await this.pg.getUserByTelegramId(user.telegramId);
+
+    if (existing) {
+        await this.mem.createUser(existing);
+        return existing;
+    }
+
     const created = await this.pg.createUser(user);
+
+    if (!created) throw new Error("❌ Не удалось создать пользователя в Postgres");
+
     await this.mem.createUser(created);
     return created;
   }
@@ -41,8 +54,8 @@ export class HybridStorage implements IStorage {
     return updated;
   }
 
-  async getAllUsers() {
-    return this.mem.getAllUsers();
+  async getAllUsers(): Promise<User[]> {
+    return await this.pg.getAllUsers();
   }
 
   // Pets

@@ -19,7 +19,7 @@ export default function Home() {
   const { data: wsData, connected } = useWebSocket();
   
   // Fetch commands from API
-  const { data: commands = [] } = useQuery({
+  const { data: commands = [] as any } = useQuery({
     queryKey: ["/api/commands"],
   });
 
