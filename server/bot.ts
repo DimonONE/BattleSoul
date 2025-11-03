@@ -61,12 +61,18 @@ export class RPGBot {
       // Проверка на нецензурные слова
       const hasBadWords = this.badWords.some(word => msg.text?.toLowerCase().includes(word));
       if (hasBadWords) {
-        await this.bot.deleteMessage(msg.chat.id, msg.message_id);
+        try {
+          await this.bot.deleteMessage(msg.chat.id, msg.message_id);
+        } catch (err: any) {
+          console.log('⚠️ Не удалось удалить сообщение:', err.response?.body?.description || err.message);
+        }
+
+        // 💬 Отправляем предупреждение пользователю
         await this.bot.sendMessage(
           msg.chat.id,
-          `⚠️ @${msg.from?.username || "гравець"}, не використовуй нецензурні слова! 😤`
+          `⚠️ @${msg.from?.username || "гравець"}, фу токсік! 😤`
         );
-        return; 
+        return;
       }
 
       const text = msg.text.toLowerCase().trim();
